@@ -103,7 +103,7 @@ agents-demo
 
 ## 执行流程图
 
-```
+```mermaid
 flowchart TD
     A[用户输入任务] --> B[前端触发 runAgents]
     B --> C[Planner Agent]
@@ -172,7 +172,7 @@ Writer 整合：
 
 ## 架构流程图
 
-```
+```mermaid
 flowchart LR
     A[React 前端] --> B[Node / Express 后端]
     B --> C[阿里云百炼 API]
