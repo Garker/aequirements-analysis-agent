@@ -175,9 +175,7 @@ Writer 整合：
 ```mermaid
 flowchart LR
     A[React 前端] --> B[Node / Express 后端]
-    B --> C[LangChain.js]
-    C --> D[阿里云百炼 OpenAI Compatible API]
-    D --> C
+    B --> C[阿里云百炼 API]
     C --> B
     B --> A
 ```
@@ -194,24 +192,15 @@ flowchart LR
 - 展示 Agent 状态
 - 展示日志
 - 展示最终结果
-- 串行触发 Planner / Researcher / Writer
 
 ### Node / Express 后端
 
 负责：
 
 - 接收前端请求
-- 组织模型调用
-- 通过 LangChain.js 封装 prompt 和输出
-- 返回结果给前端
-LangChain.js
-
-负责：
-
-- 封装聊天模型调用
-- 统一 prompt 组织方式
-- 统一输出解析方式
-- 为后续扩展 tools / memory / streaming 提供基础
+- 拼接 system prompt 和 user prompt
+- 调用阿里云百炼接口
+- 返回模型结果给前端
 
 ### 阿里云百炼 API
 
@@ -246,8 +235,8 @@ yarn
 如果相关依赖还未安装，可以执行：
 
 ```
-yarn add express cors dotenv langchain @langchain/openai @langchain/core
-yarn add -D concurrently
+yarn add openai express cors dotenv
+yarn add-D concurrently
 ```
 
 ---
@@ -259,7 +248,6 @@ yarn add -D concurrently
 ```
 DASHSCOPE_API_KEY=你的阿里云百炼Key
 PORT=3001
-MODEL_NAME=qwen-plus
 ```
 
 ---
@@ -351,54 +339,16 @@ POST /api/agent/chat
 
 ---
 
-## 核心逻辑说明
-前端：src/utils/runAgents.js
+## 前端调用逻辑
 
-前端通过 runAgents() 串行执行三个 Agent：
+前端通过 `src/utils/runAgents.js` 统一编排 Agent 执行流程。
 
-1. Planner
-2. Researcher
-3. Writer
+### 核心函数
 
-每个 Agent 都会调用统一的后端接口 /api/agent/chat。
-
-## 后端：server.js
-
-后端使用 LangChain.js 组织模型调用，核心流程包括：
-
-1. 接收前端传来的 systemPrompt 和 userPrompt
-2. 使用 ChatPromptTemplate 组合提示词
-3. 使用 ChatOpenAI 连接阿里云百炼兼容接口
-4. 使用 StringOutputParser 输出纯文本结果
-5. 将结果返回给前端
-
-## LangChain.js 调用示例
-
-```
-import { ChatOpenAI } from '@langchain/openai'
-import { ChatPromptTemplate } from '@langchain/core/prompts'
-import { StringOutputParser } from '@langchain/core/output_parsers'
-
-const llm = new ChatOpenAI({
-  model: 'qwen-plus',
-  temperature: 0.7,
-  apiKey: process.env.DASHSCOPE_API_KEY,
-  configuration: {
-    baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-  },
-})
-
-const prompt = ChatPromptTemplate.fromMessages([
-  ['system', '{systemPrompt}'],
-  ['human', '{userPrompt}'],
-])
-
-const chain = prompt.pipe(llm).pipe(new StringOutputParser())
-
-const result = await chain.invoke({
-  systemPrompt: '你是一个任务拆解专家',
-  userPrompt: '帮我拆解一个 agents demo 项目需求',
-})
-
-console.log(result)
-```
+- `callAgent()`
+向后端 `/api/agent/chat` 发起请求
+- `runAgents()`
+依次执行：
+    - Planner
+    - Researcher
+    - Writer

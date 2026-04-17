@@ -1,9 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import { ChatOpenAI } from '@langchain/openai'
-import { ChatPromptTemplate } from '@langchain/core/prompts'
-import { StringOutputParser } from '@langchain/core/output_parsers'
+import OpenAI from 'openai'
 
 dotenv.config()
 
@@ -11,13 +9,9 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-const model = new ChatOpenAI({
-  model: process.env.MODEL_NAME || 'qwen-plus',
-  temperature: 0.7,
+const client = new OpenAI({
   apiKey: process.env.DASHSCOPE_API_KEY,
-  configuration: {
-    baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-  },
+  baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
 })
 
 app.get('/api/ping', (req, res) => {
@@ -29,37 +23,28 @@ app.post('/api/agent/chat', async (req, res) => {
     const {
       systemPrompt,
       userPrompt,
-      model: requestModel,
+      model = 'qwen-plus',
       temperature = 0.7,
     } = req.body
 
-    const llm = new ChatOpenAI({
-      model: requestModel || process.env.MODEL_NAME || 'qwen-plus',
+    const completion = await client.chat.completions.create({
+      model,
       temperature,
-      apiKey: process.env.DASHSCOPE_API_KEY,
-      configuration: {
-        baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-      },
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
     })
 
-    const prompt = ChatPromptTemplate.fromMessages([
-      ['system', '{systemPrompt}'],
-      ['human', '{userPrompt}'],
-    ])
-
-    const chain = prompt.pipe(llm).pipe(new StringOutputParser())
-
-    const content = await chain.invoke({
-      systemPrompt,
-      userPrompt,
-    })
+    const content = completion.choices?.[0]?.message?.content || ''
 
     res.json({
       success: true,
       content,
+      usage: completion.usage || null,
     })
   } catch (error) {
-    console.error('LangChain/Bailian error:', error)
+    console.error('Bailian API error:', error)
     res.status(500).json({
       success: false,
       message: error?.message || '请求失败',
