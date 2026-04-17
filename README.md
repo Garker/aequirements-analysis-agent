@@ -287,7 +287,7 @@ yarn dev
 然后执行：
 
 ```
-yarnstart
+yarn start
 ```
 
 ---
