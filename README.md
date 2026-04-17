@@ -1,4 +1,4 @@
-# Agents Demo
+# Agents
 
 一个基于 **React 19 + Vite + Yarn** 构建的 Agent 小 demo。  
 前端负责展示 Agent 状态、执行日志和最终结果，后端通过 **Node.js + Express** 代理请求 **阿里云百炼** 大模型接口，实现一个最小可运行的多 Agent 编排示例。
